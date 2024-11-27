@@ -4,41 +4,75 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 export default function EditRecipe() {
-    const [recipeData, setRecipeData] = useState({})
+    const [recipeData, setRecipeData] = useState({
+        title: '',
+        time: '',
+        ingredients: '',
+        instructions: ''
+    })
     const navigate = useNavigate()
-    const{id}=useParams()
+    const { id } = useParams()
 
-    useEffect(()=>{
-        const getData=async()=>{
-            await axios.get(`http://localhost:3001/recipes/${id}`)
-            .then(response=>{
-                let res=response.data
-                setRecipeData({
-                    title:res.title,
-                    ingredients:res.ingredients.join(","),
-                    instructions:res.instructions,
-                    time:res.time
+    useEffect(() => {
+        const getData = async () => {
+            await axios.get(`http://localhost:3001/api/recipes/${id}`)
+                .then(response => {
+                    let res = response.data
+                    setRecipeData({
+                        title: res.title,
+                        ingredients: res.ingredients.join(","),
+                        instructions: res.instructions,
+                        time: res.time
+                    })
                 })
-            })
+                .catch(error => {
+                    console.error('Error fetching recipe:', error)
+                })
         }
         getData()
-    },[id])
+    }, [id])
 
     const onHandleChange = (e) => {
-        let val = (e.target.name === "ingredients") ? e.target.value.split(",") : (e.target.name === "file") ? e.target.files[0] : e.target.value
-        setRecipeData(pre => ({ ...pre, [e.target.name]: val }))
+        let val = (e.target.name === "ingredients") ? e.target.value.split(",") : e.target.value
+        setRecipeData(prev => ({ ...prev, [e.target.name]: val }))
     }
+
     const onHandleSubmit = async (e) => {
         e.preventDefault()
-        console.log(recipeData)
-        await axios.put(`http://localhost:3001/recipes/${id}`, recipeData,{
-            headers:{
-                'Content-Type':'multipart/form-data',
-                'authorization':'bearer '+localStorage.getItem("token")
+        console.log('Submitting recipe data:', recipeData)
+
+        // Prepare the JSON data
+        const jsonData = {
+            title: recipeData.title,
+            time: recipeData.time,
+            ingredients: recipeData.ingredients, // Ensure it's an array
+            instructions: recipeData.instructions
+        }
+
+        try {
+            // Retrieve token from localStorage
+            const token = localStorage.getItem("token")
+            if (!token) {
+                throw new Error("No token found, please log in again")
             }
-        })
-            .then(() => navigate("/myRecipe"))
+
+            // Send PUT request to update the recipe with token and JSON data
+            const response = await axios.put(`http://localhost:3001/api/recipes/${id}`, jsonData, {
+                headers: {
+                    'Content-Type': 'application/json', // Sending JSON data
+                    'Authorization': 'Bearer ' + token // Add Authorization header with Bearer token
+                }
+            })
+
+            console.log("Recipe updated:", response.data)
+            navigate("/myRecipe")
+
+        } catch (error) {
+            console.error("Error updating recipe:", error)
+            alert("Error updating recipe: " + error.message)
+        }
     }
+
     return (
         <>
             <div className='container'>
@@ -58,10 +92,6 @@ export default function EditRecipe() {
                     <div className='form-control'>
                         <label>Instructions</label>
                         <textarea type="text" className='input-textarea' name="instructions" rows="5" onChange={onHandleChange} value={recipeData.instructions}></textarea>
-                    </div>
-                    <div className='form-control'>
-                        <label>Recipe Image</label>
-                        <input type="file" className='input' name="file" onChange={onHandleChange}></input>
                     </div>
                     <button type="submit">Edit Recipe</button>
                 </form>
