@@ -47,14 +47,21 @@ function updateRecipe(req, res) {
 }
 
 // Controller to delete a recipe
+// Controller to delete a recipe
 function deleteRecipe(req, res) {
-     console.log("Attempting to delete recipe with id:", id);
-    recipeModel.deleteRecipe(req.params.id, (err, changes) => {
+    const { id } = req.params; // Ensure id is accessed from req.params
+
+    if (!id) {
+        return res.status(400).json({ error: "Recipe ID is required" });
+    }
+
+    recipeModel.deleteRecipe(id, (err, changes) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (changes === 0) return res.status(404).json({ error: "Recipe not found 2" });
+        if (changes === 0) return res.status(404).json({ error: "Recipe not found" });
         res.json({ message: "Recipe deleted successfully" });
     });
 }
+
 function getAllRecipes(req, res) {
     const query = `SELECT * FROM recipes`; // Adjust the query as necessary
     db.all(query, [], (err, rows) => {

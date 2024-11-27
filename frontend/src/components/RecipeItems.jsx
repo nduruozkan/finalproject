@@ -23,20 +23,43 @@ export default function RecipeItems() {
   }, [recipes]);
 
   const onDelete = async (id) => {
+    const token = localStorage.getItem("token"); // Retrieve the token from localStorage
+  
+    if (!token) {
+      alert("You must be logged in to delete a recipe.");
+      return;
+    }
+  
     try {
-      await axios.delete(`http://localhost:3001/recipes/${id}`);
-      const updatedRecipes = recipes.filter(recipe => recipe.id !== id); // Use `id` instead of `_id`
+      // Send the DELETE request with the token in the Authorization header
+      await axios.delete(`http://localhost:3001/api/recipes/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`, // Ensure the token is included
+        },
+      });
+  
+      // Filter out the deleted recipe from the list of recipes
+      const updatedRecipes = recipes.filter(recipe => recipe.id !== id); 
       setFavItems(updatedRecipes); // Update the state with the new list after deletion
-
-      const updatedFavorites = favItems.filter(recipe => recipe.id !== id); // Use `id` instead of `_id`
+  
+      // Update the favorites stored in localStorage
+      const updatedFavorites = favItems.filter(recipe => recipe.id !== id);
       localStorage.setItem("fav", JSON.stringify(updatedFavorites));
       setFavItems(updatedFavorites); // Update the state to reflect the change in favorites
+  
+      alert("Recipe deleted successfully.");
     } catch (error) {
       console.error("Error deleting recipe:", error);
-      alert("Failed to delete recipe. Please try again.");
+  
+      // If the error is due to unauthorized access (401)
+      if (error.response && error.response.status === 401) {
+        alert("You are not authorized to delete this recipe. Please log in.");
+      } else {
+        alert("Failed to delete recipe. Please try again.");
+      }
     }
   };
-
+  
   const favRecipe = (item) => {
     const isFavorite = favItems.some(recipe => recipe.id === item.id); // Use `id` instead of `_id`
     const updatedFavorites = isFavorite
